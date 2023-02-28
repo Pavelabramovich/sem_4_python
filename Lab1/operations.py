@@ -7,6 +7,8 @@ def operation(x: float, y: float, opr: str):
         case "mult":
             return x * y
         case "div":
+            if y == 0:
+                raise ZeroDivisionError
             return x / y
         case _:
             raise NotImplementedError
