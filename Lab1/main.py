@@ -1,7 +1,8 @@
 from hello_world import print_hello_world
-from operations import operation
+from operations import do_operation, Operation
 from even_list import parse_even
 from number_input import type_input
+from number_input import operation_input
 from number_input import list_input
 
 if __name__ == "__main__":
@@ -15,12 +16,10 @@ if __name__ == "__main__":
 
     x = type_input(float)
     y = type_input(float)
-    op = input("Input operation ")
+    op = operation_input()
 
     try:
-        print(f"Answer is {operation(x, y, op)}")
-    except NotImplementedError:
-        print(f"Not implemented operation")
+        print(f"Answer is {do_operation(x, y, op)}")
     except ZeroDivisionError:
         print(f"Division by zero")
 
