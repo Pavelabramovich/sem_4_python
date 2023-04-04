@@ -12,13 +12,16 @@ OTHER_ABBREVIATIONS_PATTERN = (r"\b(i\.e|e\.g\.|etc\.|p\.a\.|a\.m\.|p\.m\.|P\.S\
 
 ELLIPSE_PATTERN = r"\.\s*\.\s*\."
 
+QUESTION_PATTERN = r"(\!\?|\?\!|\!\s*\!\s*\!|\?\?)"
+
 DIRECT_SPEECH_PATTERN = r'"([^"]*?)([\.?!])?"\s*([^A-Z])?'
 
 WORD_PATTERN = r"\w*[a-zA-Z]\w*"
 
 
 def clear_ellipsis(text: str) -> str:
-    return re.sub(ELLIPSE_PATTERN, '.', text)
+    text = re.sub(ELLIPSE_PATTERN, '.', text)
+    return re.sub(QUESTION_PATTERN, ' ! ', text)
 
 
 def clear_name_abbreviations(text: str) -> str:
@@ -48,7 +51,7 @@ def clear_direct_speech(direct_speech: re.Match) -> str:
 
     # If the end of direct speech is the end of a sentence, then we need to
     # leave a dot for further consideration as a declarative sentence.
-    return ds + letter + ('.' if result.group(2) and not result.group(3) else '')
+    return ds + ('.' if result.group(2) and not result.group(3) else ' ') + letter
 
 
 def clear_sentences(text: str) -> str:

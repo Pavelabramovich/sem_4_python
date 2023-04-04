@@ -21,7 +21,10 @@ class Collection:
         return self
 
     def remove(self, element):
-        self._elements.remove(element)
+        if element in self._elements:
+            self._elements.remove(element)
+        else:
+            print("No such elements in collection")
 
     def find(self, element, *args):
         return [self._elements & {element, *args}]
@@ -49,28 +52,28 @@ class UserCollections:
     def __init__(self, first_user_name):
         self.__users = {first_user_name: Collection()}
         self.__current_user = first_user_name
-        self.__current_collection = Collection()
+        self.__current_collection = self.__users[first_user_name]
 
         with open("data_file.json", 'r+') as write_file:
             write_file.truncate()
 
     def add_user(self, user_name: str):
-        self.__users[user_name] = Collection()
+        if user_name not in self.__users.keys():
+            self.__users[user_name] = Collection()
 
     def switch_user(self, user_name: str):
-        if user_name not in self.__users.keys():
-            self.add_user(user_name)
+        self.add_user(user_name)
 
         self.__current_user = user_name
-        self.__current_collection = copy.copy(self.__users[self.__current_user])
+        self.__current_collection = Collection()
 
     def save_collection(self):
         if self.__current_user:
-            self.__users[self.__current_user] = copy.copy(self.__current_collection)
+            self.__users[self.__current_user] += self.__current_collection
 
     def load_collection(self):
         if self.__current_user:
-            self.__current_collection = copy.copy(self.__users[self.__current_user])
+            self.__current_collection += self.__users[self.__current_user]
 
     def save_users(self):
         with open("data_file.json", 'w') as write_file:
@@ -99,7 +102,7 @@ class UserCollections:
         return self.__current_collection.__copy__()
 
     def __str__(self):
-        return {item[0]: item[1].__str__() for item in self.__users.items()}.__str__()
+        return str({item[0]: str(item[1]) for item in self.__users.items()})
 
 
 class UserCollectionEncoder(JSONEncoder):

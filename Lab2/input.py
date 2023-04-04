@@ -1,26 +1,30 @@
 from enum import Enum
 
 
-def non_empty_input(message="Enter value: "):
-    inp = input(message)
-
-    return inp if inp != "" else non_empty_input(message)
-
-
 class Command(Enum):
-    ADD_USER = 0
-    ADD_ELEMENT = 1
-    REMOVE_ELEMENT = 2
-    FIND = 3
-    LIST = 4
-    GREP = 5
-    SWITCH = 6
-    LOAD_COLLECTION = 7
-    SAVE_COLLECTION = 8
-    SAVE_TO_FILE = 9
-    LOAD_FROM_FILE = 10
-    PRINT_USER_LIST = 11
-    ESCAPE = 12
+    ADD_USER = "ADD USER"
+    ADD = "ADD"
+    REMOVE = "REMOVE"
+
+    FIND = "FIND"
+    LIST = "LIST"
+    GREP = "GREP"
+    SWITCH = "SWITCH"
+    LOAD = "LOAD"
+    SAVE = "SAVE"
+    PRINT = "PRINT"
+    ESCAPE = "ESCAPE"
+
+    REMOVE_ELEMENTS = "REMOVE ELEMENTS"
+    ADD_ELEMENTS = "ADD ELEMENTS"
+
+    @staticmethod
+    def parse(s: str):
+        s = s.replace("remove elements", ' ')
+        s = s.replace("add elements", ' ')
+
+        elems = s.split()
+        return elems
 
     @staticmethod
     def from_str(s: str):
@@ -30,10 +34,10 @@ class Command(Enum):
         match s:
             case "ADD USER":
                 return Command.ADD_USER
-            case "ADD ELEMENT":
-                return Command.ADD_ELEMENT
-            case "REMOVE_ELEMENT":
-                return Command.REMOVE_ELEMENT
+            case "ADD":
+                return Command.ADD
+            case "REMOVE":
+                return Command.REMOVE
             case "FIND":
                 return Command.FIND
             case "LIST":
@@ -43,31 +47,36 @@ class Command(Enum):
             case "SWITCH":
                 return Command.SWITCH
             case "LOAD COLLECTION":
-                return Command.LOAD_COLLECTION
+                return Command.LOAD
             case "SAVE COLLECTION":
-                return Command.SAVE_COLLECTION
-            case "SAVE TO FILE":
-                return Command.SAVE_TO_FILE
-            case "LOAD FROM FILE":
-                return Command.LOAD_FROM_FILE
-            case "PRINT USER LIST":
-                return Command.PRINT_USER_LIST
+                return Command.SAVE
+            case "PRINT":
+                return Command.PRINT
             case "ESCAPE":
                 return Command.ESCAPE
             case _:
-                raise ValueError
+
+                if s.startswith("REMOVE ELEMENTS"):
+                    return Command.REMOVE_ELEMENTS
+
+                if s.startswith("ADD ELEMENTS"):
+                    return Command.ADD_ELEMENTS
+
+                else:
+
+                    raise ValueError
 
 
 def command_input():
     try:
         inp = input("Enter command: ")
-        return Command.from_str(inp)
+        return Command.from_str(inp), inp
     except ValueError:
         print("Not correct input. Try again")
         return command_input()
 
 
-def pos_int_input(message = "Enter integer number: "):
+def pos_int_input(message="Enter integer number: "):
     try:
         value = int(input(message))
         if value <= 0:
@@ -75,5 +84,10 @@ def pos_int_input(message = "Enter integer number: "):
         else:
             return value
     except ValueError:
-        return  pos_int_input(message)
+        return pos_int_input(message)
 
+
+def non_empty_input(message="Enter value: "):
+    inp = input(message)
+
+    return inp if inp != "" else non_empty_input(message)

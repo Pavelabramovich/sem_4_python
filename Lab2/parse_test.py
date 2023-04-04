@@ -26,7 +26,7 @@ class ParseTest(unittest.TestCase):
         self.CLEAR_OTHER_ABBREVIATION_RES = """"The chest contains gold, diamonds, etc ," Billy said."""
 
         self.CLEAR_DIRECT_SPEECHES_TST = """"Come to me at 7p.m.," he said to Jim."""
-        self.CLEAR_DIRECT_SPEECHES_RES = """Come to me at 7p m ,he said to Jim."""
+        self.CLEAR_DIRECT_SPEECHES_RES = """Come to me at 7p m , he said to Jim."""
 
         self.CLEAR_SENTENCES_TST = """
         Dr. Livesey said, "The log cabin is not visible from the ship. 
@@ -55,7 +55,7 @@ class ParseTest(unittest.TestCase):
 
         self.AVERAGE_SENTENCE_LENGTH = 437 / 15
 
-        self.AVERAGE_WORD_LENGTH = 23 / 6
+        self.AVERAGE_WORD_LENGTH = 437 / 116
 
         self.SPLIT_WORDS_TST = """The word "rum" and the word "death" mean the same thing to you."""
 
@@ -96,7 +96,6 @@ class ParseTest(unittest.TestCase):
 
     def test_sub_sentences_top(self):
         self.assertEqual(sub_sentences_top(self.SPLIT_WORDS_TST, 3, 2), self.TOP_TST)
-
 
 
 if __name__ == '__main__':
