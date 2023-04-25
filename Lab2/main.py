@@ -26,26 +26,28 @@ if __name__ == '__main__':
     except ZeroDivisionError:
         print("Text has no sentences")
 
-    first_user_name = non_empty_input("Enter first user name: ")
-    uc = UserCollections(first_user_name)
-
     desc = """
     Commands:
     ADD USER
-    ADD ELEMENT
-    REMOVE_ELEMENT
+    ADD 
+    REMOVE
     FIND
     LIST 
     GREP 
     SWITCH   
-    LOAD COLLECTION
-    SAVE COLLECTION
-    PRINT USER LIST
+    LOAD
+    SAVE
+    PRINT
+    ADD ELEMENTS
+    REMOVE ELEMENTS
     ESCAPE
     
     """
 
     print(desc)
+
+    first_user_name = non_empty_input("Enter first user name: ")
+    uc = UserCollections(first_user_name)
 
     while True:
 

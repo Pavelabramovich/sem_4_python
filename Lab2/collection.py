@@ -30,7 +30,10 @@ class Collection:
         return [self._elements & {element, *args}]
 
     def grep(self, pattern: str):
-        return [e for e in self._elements if re.fullmatch(pattern, e.__str__())]
+        try:
+            return [e for e in self._elements if re.fullmatch(pattern, str(e))]
+        except re.error:
+            print("Regex error")
 
     def __contains__(self, element):
         return element in self._elements

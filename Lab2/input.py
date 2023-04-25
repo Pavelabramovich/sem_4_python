@@ -46,9 +46,9 @@ class Command(Enum):
                 return Command.GREP
             case "SWITCH":
                 return Command.SWITCH
-            case "LOAD COLLECTION":
+            case "LOAD":
                 return Command.LOAD
-            case "SAVE COLLECTION":
+            case "SAVE":
                 return Command.SAVE
             case "PRINT":
                 return Command.PRINT
