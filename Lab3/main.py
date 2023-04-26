@@ -1,5 +1,4 @@
-from serializers_factory import SerializersFactory, SerializerType
-
+from SerializationOfClassesAndFuncs.serializers_factory import SerializersFactory, SerializerType
 
 def tst2(b=10):
     return b + 1

@@ -1,0 +1,40 @@
+Metadata-Version: 2.1
+Name: SerializationOfClassesAndFuncs
+Version: 0.1.0
+Summary: Library for class and function serialization
+Home-page: UNKNOWN
+Author: PavelAbamovich
+Author-email: apn20040510@gmail.com
+License: MIT
+Platform: UNKNOWN
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Operating System :: OS Independent
+Description-Content-Type: text/markdown
+
+SerializationOfClassesAndFuncs
+A library for that help you to serialize functions, classes, objects etc.
+
+Installation
+pip install SerializationOfClassesAndFuncs
+Get started
+
+
+from SerializationOfClassesAndFuncs import SerializersFactory, SerializerType
+
+s = SerializersFactory.create_serializer(SerializerType.XML)
+
+with open("data_file.xml", "w") as file:
+    s.dump(T.tst4, file)
+    
+with open("data_file.xml", "r") as file:
+    a = s.load(file)
+	
+
+

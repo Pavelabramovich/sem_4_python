@@ -1,0 +1,14 @@
+README.md
+setup.py
+SerializationOfClassesAndFuncs/__init__.py
+SerializationOfClassesAndFuncs/base_serializer.py
+SerializationOfClassesAndFuncs/dict_serializer.py
+SerializationOfClassesAndFuncs/json_serializer.py
+SerializationOfClassesAndFuncs/serializers_factory.py
+SerializationOfClassesAndFuncs/type_constants.py
+SerializationOfClassesAndFuncs/xml_serializer.py
+SerializationOfClassesAndFuncs.egg-info/PKG-INFO
+SerializationOfClassesAndFuncs.egg-info/SOURCES.txt
+SerializationOfClassesAndFuncs.egg-info/dependency_links.txt
+SerializationOfClassesAndFuncs.egg-info/requires.txt
+SerializationOfClassesAndFuncs.egg-info/top_level.txt

@@ -1,9 +1,8 @@
 import inspect
-from type_constants import nonetype, moduletype, codetype, celltype, \
-                           functype, bldinfunctype, smethodtype, cmethodtype, \
-                           mapproxytype, wrapdesctype, metdesctype, getsetdesctype, \
-                           CODE_PROPS, UNIQUE_TYPES
-
+from serialization import nonetype, moduletype, codetype, celltype, \
+                          functype, bldinfunctype, smethodtype, cmethodtype, \
+                          mapproxytype, wrapdesctype, metdesctype, getsetdesctype, \
+                          CODE_PROPS, UNIQUE_TYPES
 
 class DictSerializer:
     TYPE_KW = "type"
