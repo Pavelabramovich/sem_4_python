@@ -1,41 +1,13 @@
+import operator
 from enum import Enum
 
 
+# __call__ overrided for normal work of enum fields as functions.
 class Operation(Enum):
-    ADD = 0
-    SUB = 1
-    MUL = 2
-    DIV = 3
+    ADD = operator.add
+    SUB = operator.sub
+    MUL = operator.mul
+    DIV = operator.truediv
 
-    @staticmethod
-    def from_str(s: str):
-        s = s.strip()
-        s = s.upper()
-
-        match s:
-            case "ADD":
-                return Operation.ADD
-            case "SUB":
-                return Operation.SUB
-            case "MUL":
-                return Operation.MUL
-            case "DIV":
-                return Operation.DIV
-            case _:
-                raise ValueError
-
-
-def do_operation(x: float, y: float, opr: Operation):
-    match opr:
-        case Operation.ADD:
-            return x + y
-        case Operation.SUB:
-            return x - y
-        case Operation.MUL:
-            return x * y
-        case Operation.DIV:
-            if y == 0:
-                raise ZeroDivisionError
-            return x / y
-        case _:
-            raise NotImplementedError
+    def __call__(self, *args):
+        return self.value(*args)

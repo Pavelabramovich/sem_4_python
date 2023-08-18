@@ -1,4 +1,5 @@
 from SerializationOfClassesAndFuncs.serializers_factory import SerializersFactory, SerializerType
+import math
 
 def tst2(b=10):
     return b + 1
@@ -72,51 +73,65 @@ def for_dec(a):
 df = my_decorator(for_dec)
 
 
+
+
+
 class A:
-    a = "A"
+    x = 15
 
+    def __init__(self):
+        self.a = 12
+        self.b = 10
 
-class B(A):
-    a = "B"
+    def my_meth(self):
+        return self.a * self.b
 
+class B:
+    def __str__(self):
+        return "AAAAAAAA"
 
-class C(A):
-    a = "C"
+    def __repr__(self):
+        return "AAAAAAAA"
 
+class C(A, B):
+    pass
 
-class D(B, C):
-    a = "D"
 
 
 if __name__ == '__main__':
+    s = SerializersFactory.create_serializer(SerializerType.JSON)
 
-    o = None
-    #o = 103
-    #o = {1:{1:{1:{1:{1:{1:{1:1}}}}}}}
+    obj = df
+    obj_s = s.dumps(df)
+    obj_d = s.loads(obj_s)
 
-    s = SerializersFactory.create_serializer(SerializerType.XML)
+    print(obj_d(10))
+    print(df(10))
 
-    with open("data_file.xml", "w") as file:
-        s.dump(T.tst4, file)
-    with open("data_file.xml", "r") as file:
+    # o = None
+    # #o = 103
+    # #o = {1:{1:{1:{1:{1:{1:{1:1}}}}}}}
+    #
+    # s = SerializersFactory.create_serializer(SerializerType.XML)
+    #
+    with open("data_file.json", "w") as file:
+        s.dump(T, file)
+    with open("data_file.json", "r") as file:
         a = s.load(file)
-
-    print(a)
-
-    print(T.__dict__)
-    print(a.__dict__)
-
-    print(a)
-    print(a._X)
-    print(a.A)
-    print(a.tst4())
-    print(a.clsmet())
-    print(a.lol())
-    print(a._LOL)
-
-    # x = JsonSerializer.dumps(T.clsmet)
-    # print(x)
-    # y = JsonSerializer.loads(x)
+    #
+    # print(a)
+    #
+    # print(a)
+    # print(a._X)
+    # print(a.A)
+    # print(a.tst4())
+    # print(a.clsmet())
+    # print(a.lol())
+    # print(a._LOL)
+    #
+    # # x = JsonSerializer.dumps(T.clsmet)
+    # # print(x)
+    # # y = JsonSerializer.loads(x)
 
 
 
