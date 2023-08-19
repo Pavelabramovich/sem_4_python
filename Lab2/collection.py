@@ -6,7 +6,6 @@ import json
 
 
 class Collection:
-
     def __init__(self, *args):
         self._elements = set(args)
 
@@ -21,10 +20,10 @@ class Collection:
         return self
 
     def remove(self, element):
-        if element in self._elements:
+        try:
             self._elements.remove(element)
-        else:
-            print("No such elements in collection")
+        except KeyError as error:
+            raise KeyError("No such element in Collection.") from error
 
     def find(self, element, *args):
         return [self._elements & {element, *args}]
@@ -32,8 +31,8 @@ class Collection:
     def grep(self, pattern: str):
         try:
             return [e for e in self._elements if re.fullmatch(pattern, str(e))]
-        except re.error:
-            print("Regex error")
+        except re.error as error:
+            raise re.error("Incorrect regex") from error
 
     def __contains__(self, element):
         return element in self._elements
@@ -42,7 +41,7 @@ class Collection:
         return bool(self._elements)
 
     def __str__(self):
-        return self._elements.__str__()
+        return f"<Collection object: {self._elements}>"
 
     def __copy__(self):
         return Collection(*self._elements)
@@ -52,13 +51,11 @@ class Collection:
 
 
 class UserCollections:
-    def __init__(self, first_user_name):
+    def __init__(self, first_user_name, file):
         self.__users = {first_user_name: Collection()}
         self.__current_user = first_user_name
         self.__current_collection = self.__users[first_user_name]
-
-        with open("data_file.json", 'r+') as write_file:
-            write_file.truncate()
+        file.truncate()
 
     def add_user(self, user_name: str):
         if user_name not in self.__users.keys():
@@ -78,13 +75,11 @@ class UserCollections:
         if self.__current_user:
             self.__current_collection += self.__users[self.__current_user]
 
-    def save_users(self):
-        with open("data_file.json", 'w') as write_file:
-            json.dump(self, write_file, cls=UserCollectionEncoder, indent=4)
+    def save_users(self, file):
+        json.dump(self, file, cls=UserCollectionEncoder, indent=4)
 
-    def load_users(self):
-        with open("data_file.json", 'r') as read_file:
-            self.__users = json.load(read_file, object_hook=from_json)
+    def load_users(self, file):
+        self.__users = json.load(file, object_hook=from_json)
 
     def add_elem(self, element):
         self.__current_collection.add(element)
@@ -93,7 +88,10 @@ class UserCollections:
         self.__current_collection.remove(element)
 
     def find_elem(self, element):
-        return self.__current_collection.find(element)
+        if elem := self.__current_collection.find(element):
+            return elem[0]
+        else:
+            return None
 
     def parse_elem(self, pattern):
         return self.__current_collection.grep(pattern)

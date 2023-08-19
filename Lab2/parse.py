@@ -1,14 +1,18 @@
 import re
+from collections import Counter
 
-NAME_ABBREVIATION_PATTERN = r"\b(Mr\.|Ms\.|Mrs\.|Dr\.|Lt\.|St\.|Blvd\.|" + \
-                            r"Ave\.|Sq\.|Rd\.|Bldg\.|B\.Sc\.|M\.D\.|Ph\.D\.|Rep\.|\w\.)"
 
-OTHER_ABBREVIATIONS_PATTERN = (r"\b(i\.e|e\.g\.|etc\.|p\.a\.|a\.m\.|p\.m\.|P\.S\.|Re\.|p\.|" +
-                               r"exp\.|err\.|et\.al\.|ex\.|fin\.|vs\.|N\.B\.|" +
-                               r"ft\.|oz\.|pt\.|in\.|sec\.|g\.|cm\.|qt\.|" +
-                               r"Jan\.|Feb\.|Aug\.|Sept\.|Oct\.|Nov\.|Dec\.|Sun\.|" +
-                               r"Mon\.|Tues\.|Wed\.|Thurs\.|Fri\.|Sat.\|Sun\.|" +
-                               r"\.com|\.ru|\.by|\.cpp|\.cs|\.txt|\.py)")
+NAME_ABBREVIATION_PATTERN = (
+    r"\b(Mr\.|Ms\.|Mrs\.|Dr\.|Lt\.|St\.|Blvd\.|" +
+    r"Ave\.|Sq\.|Rd\.|Bldg\.|B\.Sc\.|M\.D\.|Ph\.D\.|Rep\.|\w\.)")
+
+NONAME_ABBREVIATIONS_PATTERN = (
+    r"\b(i\.e|e\.g\.|etc\.|p\.a\.|a\.m\.|p\.m\.|P\.S\.|Re\.|p\.|" +
+    r"exp\.|err\.|et\.al\.|ex\.|fin\.|vs\.|N\.B\.|" +
+    r"ft\.|oz\.|pt\.|in\.|sec\.|g\.|cm\.|qt\.|" +
+    r"Jan\.|Feb\.|Aug\.|Sept\.|Oct\.|Nov\.|Dec\.|Sun\.|" +
+    r"Mon\.|Tues\.|Wed\.|Thurs\.|Fri\.|Sat.\|Sun\.|" +
+    r"\.com|\.ru|\.by|\.cpp|\.cs|\.txt|\.py)")
 
 ELLIPSE_PATTERN = r"\.\s*\.\s*\."
 
@@ -28,8 +32,8 @@ def clear_name_abbreviations(text: str) -> str:
     return re.sub(NAME_ABBREVIATION_PATTERN, clear_points, text)
 
 
-def clear_other_abbreviations(text: str) -> str:
-    return re.sub(fr"{OTHER_ABBREVIATIONS_PATTERN}(?!\s+[A-Z])", clear_points, text)
+def clear_noname_abbreviations(text: str) -> str:
+    return re.sub(fr"{NONAME_ABBREVIATIONS_PATTERN}(?!\s+[A-Z])", clear_points, text)
 
 
 def clear_points(abbreviation: re.Match) -> str:
@@ -57,7 +61,7 @@ def clear_direct_speech(direct_speech: re.Match) -> str:
 def clear_sentences(text: str) -> str:
     text = clear_direct_speeches(text)
     text = clear_ellipsis(text)
-    text = clear_other_abbreviations(text)
+    text = clear_noname_abbreviations(text)
     text = clear_name_abbreviations(text)
 
     return text
@@ -77,18 +81,28 @@ def non_declarative_sentences_count(text: str) -> int:
 
 def average_sentence_length(text: str) -> float:
     text = clear_sentences(text)
-    sentences = text.replace('?', '.').replace('!', '.').split('.')
+
+    # After split, list will contain one extra empty sentence. Slice is needed to get rid of it.
+    sentences = text.replace('?', '.').replace('!', '.').split('.')[:-1]
     words = split_words(text)
+
+    if not words:
+        raise ValueError("Text has no words")
 
     lengths = [len(word) for word in words]
 
-    # The sentences collection will always have an extra empty line at the end. It must be ignored
-    return sum(lengths) / (len(sentences) - 1)
+    try:
+        return sum(lengths) / len(sentences)
+    except ZeroDivisionError as error:
+        raise ValueError("Text has no sentences.") from error
 
 
 def average_word_length(text: str):
     text = clear_sentences(text)
     words = split_words(text)
+
+    if not words:
+        raise ValueError("Text has no words")
 
     lengths = [len(word) for word in words]
 
@@ -99,22 +113,20 @@ def split_words(sentence: str) -> list[str]:
     return re.findall(WORD_PATTERN, sentence)
 
 
-def sub_sentences_top(text: str, top_of: int = 10, length: int = 4):
+def sub_sentences_top(text: str, top_of: int = 10, ss_len: int = 4):
     words = split_words(text)
+    words = [word.lower() for word in words]
 
-    # We create a collection of sub-sentences by enumeration of all possible combinations with
-    # a check for the count of words. Convert all words to lower case for correct comparison.
-    # Translation to a string to get the hash.
-    sub_sentences = [words[i:j + 1].__str__().lower()
-                     for i in range(len(words))
-                     for j in range(i, len(words)) if j + 1 - i == length]
+    # We create a collection of sub-sentences by enumeration of all combinations with
+    # a check for the count of words. Converting to tuple to get the hash.
+    sub_sentences = [tuple(words[i:i + ss_len]) for i in range(len(words) - ss_len + 1)]
 
     # We transform the collection into a dictionary for counting and removing duplicates.
-    d = {sub_sentence: sub_sentences.count(sub_sentence) for sub_sentence in sub_sentences}
+    counter = Counter(sub_sentences)
 
     # We get a list of pairs: sub-sentence and the number of repetitions.
     # Sort by number of repetitions in reverse order.
-    lst = sorted(d.items(), key=lambda gr: gr[1], reverse=True)
+    lst = sorted(counter.items(), key=lambda kv: kv[1], reverse=True)
 
     # Return the required number of sub-sentences.
     return lst[:top_of:]

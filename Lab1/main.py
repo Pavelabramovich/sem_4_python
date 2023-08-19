@@ -18,7 +18,7 @@ if __name__ == "__main__":
     operation = operation_input()
 
     try:
-        print(f"Answer is {operation(x, y)}")
+        print(f"Answer is {operation.value(x, y)}")
     except ZeroDivisionError:
         print(f"Division by zero")
 
@@ -26,5 +26,10 @@ if __name__ == "__main__":
     print()
 
     int_lst = list_input(int, ',')
-    print(f"Answer is {get_evens(int_lst)}")
+    ans = get_evens(int_lst)
+
+    if ans:
+        print(f"Answer is: {ans}")
+    else:
+        print("There are no even numbers in the list")
 

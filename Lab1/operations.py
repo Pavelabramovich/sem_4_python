@@ -8,6 +8,3 @@ class Operation(Enum):
     SUB = operator.sub
     MUL = operator.mul
     DIV = operator.truediv
-
-    def __call__(self, *args):
-        return self.value(*args)
