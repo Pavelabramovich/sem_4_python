@@ -1,6 +1,7 @@
 from SerializationOfClassesAndFuncs.serializers_factory import SerializersFactory, SerializerType
 import math
 
+
 def tst2(b=10):
     return b + 1
 
@@ -101,12 +102,45 @@ class C(A, B):
 if __name__ == '__main__':
     s = SerializersFactory.create_serializer(SerializerType.JSON)
 
-    obj = df
-    obj_s = s.dumps(df)
+    class cl:
+        def __init__(self, st):
+            self.st = st
+
+        def __str__(self):
+            return str(self.st)
+
+    st = {1, 2, 3, 4}
+    st.update({cl(st)})
+
+    print(st)
+
+
+    l = [1,2,3,4]
+    l[0] = l
+
+    print(l)
+
+    obj_s = s.dumps(l)
+    print(obj_s)
     obj_d = s.loads(obj_s)
 
-    print(obj_d(10))
-    print(df(10))
+    print(obj_d)
+
+    b1 = bytes(list(range(256)))
+    b2 = bytearray(list(range(256)))
+
+    print(b1)
+    print(b2)
+
+    b3 = b1.decode('Latin-1')
+    b3 = bytes(b3, 'Latin-1')
+
+    print(b3)
+
+    print(b1 == b3)
+
+    # print(obj_d(10))
+    # print(df(10))
 
     # o = None
     # #o = 103
@@ -114,10 +148,10 @@ if __name__ == '__main__':
     #
     # s = SerializersFactory.create_serializer(SerializerType.XML)
     #
-    with open("data_file.json", "w") as file:
-        s.dump(T, file)
-    with open("data_file.json", "r") as file:
-        a = s.load(file)
+    # with open("data_file.json", "w") as file:
+    #     s.dump(T, file)
+    # with open("data_file.json", "r") as file:
+    #     a = s.load(file)
     #
     # print(a)
     #

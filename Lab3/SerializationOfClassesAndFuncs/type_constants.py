@@ -1,53 +1,51 @@
-from types import NoneType as nonetype, \
-                  ModuleType as moduletype, \
-                  CodeType as codetype, \
-                  FunctionType as functype, \
-                  BuiltinFunctionType as bldinfunctype, \
-                  CellType as celltype, \
-                  MappingProxyType as mapproxytype, \
-                  WrapperDescriptorType as wrapdesctype, \
-                  MethodDescriptorType as metdesctype, \
-                  GetSetDescriptorType as getsetdesctype
+from types import (
+    NoneType as nonetype,
+    ModuleType as moduletype,
+    CodeType as codetype,
+    FunctionType as functype,
+    BuiltinFunctionType as bldinfunctype,
+    CellType as celltype,
+    MappingProxyType as mapproxytype,
+    WrapperDescriptorType as wrapdesctype,
+    MethodDescriptorType as metdesctype,
+    GetSetDescriptorType as getsetdesctype,
+    ClassMethodDescriptorType as clsmetdesctype,
+    MemberDescriptorType as memdesctype
+)
+
+smethodtype = staticmethod
+cmethodtype = classmethod
+proptype = property
 
 
-class Cls:
-    @staticmethod
-    def sf():
-        pass
+CODE_PROPERTIES = tuple(prop for prop in (
+        'co_argcount',
+        'co_posonlyargcount',
+        'co_kwonlyargcount',
+        'co_nlocals',
+        'co_stacksize',
+        'co_flags',
+        'co_code',
+        'co_consts',
+        'co_names',
+        'co_varnames',
+        'co_filename',
+        'co_name',
+        'co_qualname',
+        'co_firstlineno',
+        'co_lnotab',
+        'co_exceptiontable',
+        'co_freevars',
+        'co_cellvars'
+    ) if hasattr(codetype, prop)
+)
 
-    @classmethod
-    def cf(cls):
-        pass
-
-
-smethodtype = type(Cls.__dict__["sf"])
-cmethodtype = type(Cls.__dict__["cf"])
-
-CODE_PROPS = [prop.__name__ for prop in [
-        codetype.co_argcount,
-        codetype.co_posonlyargcount,
-        codetype.co_kwonlyargcount,
-        codetype.co_nlocals,
-        codetype.co_stacksize,
-        codetype.co_flags,
-        codetype.co_code,
-        codetype.co_consts,
-        codetype.co_names,
-        codetype.co_varnames,
-        codetype.co_filename,
-        codetype.co_name,
-       # codetype.co_qualname,
-        codetype.co_firstlineno,
-        codetype.co_lnotab,
-     #   codetype.co_exceptiontable,
-        codetype.co_freevars,
-        codetype.co_cellvars]
-    ]
-
-UNIQUE_TYPES = [
-    mapproxytype,
+DESCRIPTOR_TYPES = (
     wrapdesctype,
     metdesctype,
     getsetdesctype,
-    bldinfunctype
-]
+    clsmetdesctype,
+    memdesctype
+)
+
+

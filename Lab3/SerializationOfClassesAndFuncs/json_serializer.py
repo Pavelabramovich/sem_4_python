@@ -4,7 +4,7 @@ from SerializationOfClassesAndFuncs import BaseSerializer
 from SerializationOfClassesAndFuncs import DictSerializer
 
 
-from SerializationOfClassesAndFuncs import nonetype
+from SerializationOfClassesAndFuncs.type_constants import nonetype
 
 
 class JsonSerializer(BaseSerializer):

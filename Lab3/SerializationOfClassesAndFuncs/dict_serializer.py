@@ -1,12 +1,19 @@
 import inspect
-from SerializationOfClassesAndFuncs import nonetype, moduletype, codetype, celltype, \
-                          functype, bldinfunctype, smethodtype, cmethodtype, \
-                          mapproxytype, wrapdesctype, metdesctype, getsetdesctype, \
-                          CODE_PROPS, UNIQUE_TYPES
+from SerializationOfClassesAndFuncs.type_constants import (
+    nonetype, moduletype, codetype, celltype,
+    functype, smethodtype, cmethodtype, proptype,
+    mapproxytype, CODE_PROPERTIES, DESCRIPTOR_TYPES
+)
+
+from inspect import isfunction, ismethod
+
 
 class DictSerializer:
     TYPE_KW = "type"
     SOURCE_KW = "source"
+    ID_KW = "id"
+
+    RECURSION_KW = "__recursion__"
 
     CODE_KW = "__code__"
     GLOBALS_KW = functype.__globals__.__name__
@@ -22,245 +29,354 @@ class DictSerializer:
     OBJECT_KW = "object"
 
     @classmethod
-    def to_dict(cls, obj, is_inner_func=False):
+    def to_dict(cls, obj):
+        return cls._to_dict(obj)
+
+    @classmethod
+    def _update_serialize_recursive_dict(cls, obj, recursive_dict):
+        type_name = type(obj).__name__
+        if type_name in recursive_dict:
+            recursive_dict[type_name].update({id(obj)})
+        else:
+            recursive_dict[type_name] = {id(obj)}
+
+    @classmethod
+    def _is_obj_in_serialize_recursive_dict(cls, obj, recursive_dict):
+        type_name = type(obj).__name__
+        if type_name in recursive_dict:
+            return id(obj) in recursive_dict[type_name]
+        else:
+            return False
+
+    @classmethod
+    def _to_dict(cls, obj, recursive_dict=None, recursive_protection=True):
         if type(obj) in (int, float, bool, str, nonetype):
             return obj
 
-        if type(obj) is list:
-            return [cls.to_dict(o) for o in obj]
-
-        if type(obj) is dict:
-            # Since the key in the dictionary can be a hashable object, which will be represented as a non-hashable
-            # dictionary, it is easier to represent the dictionary as a list of key-value pairs
-            return {cls.TYPE_KW: dict.__name__,
-                    cls.SOURCE_KW: [[cls.to_dict(item[0]), cls.to_dict(item[1])] for item in obj.items()]}
-
-        if type(obj) in (set, frozenset, tuple, bytes, bytearray):
-            return {cls.TYPE_KW: type(obj).__name__,
-                    cls.SOURCE_KW: cls.to_dict([*obj])}
-
         if type(obj) is complex:
             return {cls.TYPE_KW: complex.__name__,
-                    cls.SOURCE_KW: {complex.real.__name__: obj.real,
-                                    complex.imag.__name__: obj.imag}}
+                    cls.SOURCE_KW: {complex.real.__name__: cls._to_dict(obj.real),
+                                    complex.imag.__name__: cls._to_dict(obj.imag)}}
 
-        if type(obj) is moduletype:
-            return {cls.TYPE_KW: moduletype.__name__,
-                    cls.SOURCE_KW: obj.__name__}
+        elif type(obj) in (set, tuple, frozenset, bytes, bytearray):
+            return {cls.TYPE_KW: type(obj).__name__,
+                    cls.SOURCE_KW: cls._to_dict([*obj], recursive_dict, recursive_protection=False)}
 
-        if type(obj) is codetype:
+        if recursive_dict is None:
+            recursive_dict = {}
+
+        if recursive_protection:
+            if cls._is_obj_in_serialize_recursive_dict(obj, recursive_dict):
+                return {cls.TYPE_KW: cls.RECURSION_KW,
+                        cls.SOURCE_KW: {cls.TYPE_KW: type(obj).__name__,
+                                        cls.ID_KW: cls._to_dict(id(obj))}}
+            else:
+                cls._update_serialize_recursive_dict(obj, recursive_dict)
+
+        if type(obj) is list:
+            if recursive_protection:
+                ser_obj = {cls.TYPE_KW: list.__name__,
+                           cls.SOURCE_KW: cls._to_dict(obj, recursive_dict, recursive_protection=False)}
+            else:
+                return [cls._to_dict(o, recursive_dict) for o in obj]
+
+        elif type(obj) is set:
+            return {cls.TYPE_KW: type(obj).__name__,
+                    cls.SOURCE_KW: cls._to_dict([*obj], recursive_dict, recursive_protection=False)}
+
+        elif type(obj) is dict:
+            # Since the key in the dictionary can be a hashable object, which will be represented as a non-hashable
+            # dictionary, it is easier to represent the dictionary as a list of key-value pairs
+            ser_obj = {cls.TYPE_KW: dict.__name__,
+                       cls.SOURCE_KW: [[cls._to_dict(key, recursive_dict), cls._to_dict(value, recursive_dict)]
+                                       for key, value in obj.items()]}
+
+        elif type(obj) is moduletype:
+            ser_obj = {cls.TYPE_KW: moduletype.__name__,
+                       cls.SOURCE_KW: obj.__name__}
+
+        elif type(obj) is codetype:
             code = {cls.TYPE_KW: codetype.__name__}
             source = {}
 
             for (key, value) in inspect.getmembers(obj):
-                if key in CODE_PROPS:
-                    source[key] = cls.to_dict(value)
+                if key in CODE_PROPERTIES:
+                    source[key] = cls._to_dict(value, recursive_dict, recursive_protection=False)
 
             code.update({cls.SOURCE_KW: source})
-            return code
+            ser_obj = code
 
-        if type(obj) is celltype:
-            return {cls.TYPE_KW: celltype.__name__,
-                    cls.SOURCE_KW: cls.to_dict(obj.cell_contents)}
+        elif type(obj) is celltype:
+            ser_obj = {cls.TYPE_KW: celltype.__name__,
+                       cls.SOURCE_KW: cls._to_dict(obj.cell_contents, recursive_dict)}
 
-        if type(obj) in (smethodtype, cmethodtype):
-            return {cls.TYPE_KW: type(obj).__name__,
-                    cls.SOURCE_KW: cls.to_dict(obj.__func__, is_inner_func)}
+        elif type(obj) in (smethodtype, cmethodtype):
+            ser_obj = {cls.TYPE_KW: type(obj).__name__,
+                       cls.SOURCE_KW: cls._to_dict(obj.__func__, recursive_dict)}
 
-        if inspect.isroutine(obj):
+        elif type(obj) is proptype:
+            fget = cls._to_dict(obj.fget, recursive_dict)
+            fset = cls._to_dict(obj.fset, recursive_dict)
+            fdel = cls._to_dict(obj.fdel, recursive_dict)
+
+            ser_obj = {cls.TYPE_KW: proptype.__name__,
+                       cls.SOURCE_KW: {proptype.fget.__name__: fget,
+                                       proptype.fset.__name__: fset,
+                                       proptype.fdel.__name__: fdel}}
+
+        elif isfunction(obj) or ismethod(obj):
             source = {}
 
             # Code
-            source[cls.CODE_KW] = cls.to_dict(obj.__code__)
+            source[cls.CODE_KW] = cls._to_dict(obj.__code__, recursive_dict)
 
             # Global vars
-            gvars = cls.__get_gvars(obj, is_inner_func)
-            source[cls.GLOBALS_KW] = cls.to_dict(gvars)
+            gvars = cls._get_gvars(obj)
+            source[cls.GLOBALS_KW] = cls._to_dict(gvars, recursive_dict)
 
             # Name
-            source[cls.NAME_KW] = cls.to_dict(obj.__name__)
+            source[cls.NAME_KW] = cls._to_dict(obj.__name__)
 
             # Defaults
-            source[cls.DEFAULTS_KW] = cls.to_dict(obj.__defaults__)
+            source[cls.DEFAULTS_KW] = cls._to_dict(obj.__defaults__, recursive_dict)
 
             # Closure
-            source[cls.CLOSURE_KW] = cls.to_dict(obj.__closure__)
+            source[cls.CLOSURE_KW] = cls._to_dict(obj.__closure__, recursive_dict)
 
-            return {cls.TYPE_KW: functype.__name__,
-                    cls.SOURCE_KW: source}
+            ser_obj = {cls.TYPE_KW: functype.__name__,
+                       cls.SOURCE_KW: source}
 
         elif inspect.isclass(obj):
             source = {}
 
             # Name
-            source[cls.NAME_KW] = cls.to_dict(obj.__name__)
+            source[cls.NAME_KW] = cls._to_dict(obj.__name__)
 
             # Bases
-            source[cls.BASES_KW] = cls.to_dict(tuple(b for b in obj.__bases__ if b != object))
+            source[cls.BASES_KW] = cls._to_dict(tuple(b for b in obj.__bases__ if b != object))
 
             # Dict
-            source[cls.DICT_KW] = cls.__get_obj_dict(obj)
+            source[cls.DICT_KW] = cls._get_obj_dict(obj, recursive_dict)
 
-            return {cls.TYPE_KW: type.__name__,
-                    cls.SOURCE_KW: source}
+            ser_obj = {cls.TYPE_KW: type.__name__,
+                       cls.SOURCE_KW: source}
 
         else:
             source = {}
 
             # Class
-            source[cls.CLASS_KW] = cls.to_dict(obj.__class__)
+            source[cls.CLASS_KW] = cls._to_dict(obj.__class__, recursive_dict=recursive_dict)
 
             # Dict
-            source[cls.DICT_KW] = cls.__get_obj_dict(obj)
+            source[cls.DICT_KW] = cls._get_obj_dict(obj, recursive_dict)
 
-            return {cls.TYPE_KW: cls.OBJECT_KW,
-                    cls.SOURCE_KW: source}
+            ser_obj = {cls.TYPE_KW: cls.OBJECT_KW,
+                       cls.SOURCE_KW: source}
+
+        if recursive_protection:
+            ser_obj.update({cls.ID_KW: id(obj)})
+
+        return ser_obj
 
     @classmethod
-    def __get_gvars(cls, func, is_inner_func):
-        name = func.__name__
+    def _get_gvars(cls, func):
         gvars = {}
 
         for gvar_name in func.__code__.co_names:
             # Separating the variables that the function needs
             if gvar_name in func.__globals__:
-
-                # Module
-                if type(func.__globals__[gvar_name]) is moduletype:
-                    gvars[gvar_name] = func.__globals__[gvar_name]
-
-                # Class
-                elif inspect.isclass(func.__globals__[gvar_name]):
-                    # To prevent recursion, the class in which this method is declared is replaced with the
-                    # name of the class. In the future, this name will be replaced by the class type
-                    c = func.__globals__[gvar_name]
-                    if is_inner_func and name in c.__dict__ and func == c.__dict__[name].__func__:
-                        gvars[gvar_name] = c.__name__
-                    else:
-                        gvars[gvar_name] = c
-
-                # Recursion protection
-                elif gvar_name == func.__code__.co_name:
-                    gvars[gvar_name] = func.__name__
-
-                else:
-                    gvars[gvar_name] = func.__globals__[gvar_name]
+                gvars[gvar_name] = func.__globals__[gvar_name]
 
         return gvars
 
     @classmethod
-    def __get_obj_dict(cls, obj):
-        dct = {item[0]: item[1] for item in obj.__dict__.items()}
-        dct2 = {}
+    def _get_obj_dict(cls, obj, recursive_dict):
+        dct = {}
 
-        for key, value in dct.items():
-            if type(value) not in UNIQUE_TYPES:
-                if inspect.isroutine(value):
-                    # Recursion protection
-                    dct2[cls.to_dict(key)] = cls.to_dict(value, is_inner_func=True)
-                else:
-                    dct2[cls.to_dict(key)] = cls.to_dict(value)
+        for key, value in obj.__dict__.items():
+            if type(value) not in DESCRIPTOR_TYPES:
+                dct[cls._to_dict(key)] = cls._to_dict(value, recursive_dict)
 
-        return dct2
+        return dct
+
+    class __RecursionWrapper:
+        def __init__(self, obj_type, obj_id):
+            self.obj_type = obj_type
+            self.obj_id = obj_id
 
     @classmethod
-    def from_dict(cls, obj, is_dict=False):
+    def _update_deserialize_recursive_dict(cls, deser_obj, recursive_id, recursive_dict):
+        type_name = type(deser_obj).__name__
+        if type_name in recursive_dict:
+            recursive_dict[type_name].update({recursive_id: deser_obj})
+        else:
+            recursive_dict[type_name] = {recursive_id: deser_obj}
 
-        if is_dict:
-            return {cls.from_dict(item[0]): cls.from_dict(item[1]) for item in obj}
+    @classmethod
+    def from_dict(cls, obj):
+        recursive_dict = {}
+        ans = cls._from_dict(obj, recursive_dict)
 
-        if type(obj) not in (dict, list):
+        return cls._restore_recursion(ans, recursive_dict)
+
+    @classmethod
+    def _from_dict(cls, obj, recursive_dict=None):
+        if type(obj) in (int, float, bool, str, nonetype):
             return obj
 
         elif type(obj) is list:
-            return [cls.from_dict(o) for o in obj]
+            return [cls._from_dict(o, recursive_dict) for o in obj]
 
         else:
             obj_type = obj[cls.TYPE_KW]
             obj_source = obj[cls.SOURCE_KW]
 
-            if obj_type == dict.__name__:
-                return cls.from_dict(obj_source, is_dict=True)
-
-            # Key - type name, value - type itself. Calling by type name returns that type.
-            # This is necessary for the same creation of simple collections.
-            cols_dict = {t.__name__: t for t in [set, frozenset, tuple, bytes, bytearray]}
-            if obj_type in cols_dict:
-                return cols_dict[obj_type](cls.from_dict(obj_source))
-
             if obj_type == complex.__name__:
-                return obj_source[complex.real.__name__] + \
-                    obj_source[complex.imag.__name__] * 1j
+                return (obj_source[complex.real.__name__] +
+                        obj_source[complex.imag.__name__] * 1j)
 
-            if obj_type == moduletype.__name__:
-                return __import__(obj_source)
+            elif obj_type == cls.RECURSION_KW:
+                return cls.__RecursionWrapper(obj_source[cls.TYPE_KW], obj_source[cls.ID_KW])
 
-            if obj_type == codetype.__name__:
-                return codetype(*[cls.from_dict(obj_source[prop]) for prop in CODE_PROPS])
+            elif obj_type == list.__name__:
+                deser_obj = cls._from_dict(obj_source, recursive_dict)
 
-            if obj_type == celltype.__name__:
-                return celltype(cls.from_dict(obj_source))
+            elif obj_type == set.__name__:
+                deser_obj = set(cls._from_dict(obj_source, recursive_dict))
 
-            if obj_type == smethodtype.__name__:
-                return staticmethod(cls.from_dict(obj_source))
+            elif obj_type == dict.__name__:
+                deser_obj = {cls._from_dict(key, recursive_dict): cls._from_dict(value, recursive_dict)
+                             for key, value in obj_source}
 
-            if obj_type == cmethodtype.__name__:
-                return classmethod(cls.from_dict(obj_source))
+            elif obj_type in (cols_dict := {t.__name__: t for t in (set, frozenset, tuple, bytes, bytearray)}):
+                deser_obj = cols_dict[obj_type](cls._from_dict(obj_source, recursive_dict))
 
-            if obj_type == functype.__name__:
-                code = cls.from_dict(obj_source[cls.CODE_KW])
-                gvars = cls.from_dict(obj_source[cls.GLOBALS_KW])
-                name = cls.from_dict(obj_source[cls.NAME_KW])
-                defaults = cls.from_dict(obj_source[cls.DEFAULTS_KW])
-                closure = cls.from_dict(obj_source[cls.CLOSURE_KW])
+            elif obj_type == moduletype.__name__:
+                deser_obj = __import__(obj_source)
 
-                # If there are suitable global variables, they are replaced.
-                for key in gvars:
-                    if key in code.co_name and key in globals():
-                        gvars[key] = globals()[key]
+            elif obj_type == codetype.__name__:
+                deser_obj = codetype(*[cls._from_dict(obj_source[prop], recursive_dict) for prop in CODE_PROPERTIES])
 
-                func = functype(code, gvars, name, defaults, closure)
+            elif obj_type == celltype.__name__:
+                deser_obj = celltype(cls._from_dict(obj_source, recursive_dict))
 
-                # Restoring recursion
-                if func.__name__ in gvars:
-                    func.__globals__.update({func.__name__: func})
+            elif obj_type == smethodtype.__name__:
+                deser_obj = staticmethod(cls._from_dict(obj_source, recursive_dict))
 
-                return func
+            elif obj_type == cmethodtype.__name__:
+                deser_obj = classmethod(cls._from_dict(obj_source, recursive_dict))
 
-            if obj_type == type.__name__:
-                name = cls.from_dict(obj_source[cls.NAME_KW])
-                bases = cls.from_dict(obj_source[cls.BASES_KW])
-                dct = obj_source[cls.DICT_KW]
-                dct = {cls.from_dict(item[0]): cls.from_dict(item[1]) for item in dct.items()}
+            elif obj_type == proptype.__name__:
+                fget = cls._from_dict(obj_source[proptype.fget.__name__], recursive_dict)
+                fset = cls._from_dict(obj_source[proptype.fset.__name__], recursive_dict)
+                fdel = cls._from_dict(obj_source[proptype.fdel.__name__], recursive_dict)
+                
+                deser_obj = property(fget=fget, fset=fset, fdel=fdel)
 
-                cl = type(name, bases, dct)
+            elif obj_type == functype.__name__:
+                code = cls._from_dict(obj_source[cls.CODE_KW], recursive_dict)
+                gvars = cls._from_dict(obj_source[cls.GLOBALS_KW], recursive_dict)
+                name = cls._from_dict(obj_source[cls.NAME_KW], recursive_dict)
+                defaults = cls._from_dict(obj_source[cls.DEFAULTS_KW], recursive_dict)
+                closure = cls._from_dict(obj_source[cls.CLOSURE_KW], recursive_dict)
 
-                # Restore a reference to the current class in the nested method __globals__
-                for attr in cl.__dict__.values():
-                    if inspect.isroutine(attr):
-                        if type(attr) in (smethodtype, classmethod):
-                            fglobs = attr.__func__.__globals__
-                        else:
-                            fglobs = attr.__globals__
+                deser_obj = functype(code, gvars, name, defaults, closure)
 
-                        for gv in fglobs.keys():
-                            if gv == cl.__name__:
-                                fglobs[gv] = cl
+            elif obj_type == type.__name__:
+                name = cls._from_dict(obj_source[cls.NAME_KW], recursive_dict)
+                bases = cls._from_dict(obj_source[cls.BASES_KW], recursive_dict)
+                dct = {cls._from_dict(key, recursive_dict): cls._from_dict(value, recursive_dict)
+                       for key, value in obj_source[cls.DICT_KW].items()}
 
-                return cl
+                deser_obj = type(name, bases, dct)
 
             else:
-                clas = cls.from_dict(obj_source[cls.CLASS_KW])
-                dct = obj_source[cls.DICT_KW]
-                dct = {cls.from_dict(item[0]): cls.from_dict(item[1]) for item in dct.items()}
+                clas = cls._from_dict(obj_source[cls.CLASS_KW])
+                dct = {cls._from_dict(key, recursive_dict): cls._from_dict(value, recursive_dict)
+                       for key, value in obj_source[cls.DICT_KW].items()}
 
-                o = object.__new__(clas)
-                o.__dict__ = dct
+                deser_obj = object.__new__(clas)
+                deser_obj.__dict__ = dct
 
-                return o
+            if obj_id := obj.get(cls.ID_KW, False):
+                if recursive_dict is not None:
+                    cls._update_deserialize_recursive_dict(deser_obj, obj_id, recursive_dict)
 
+            return deser_obj
 
+    @classmethod
+    def _restore_recursion(cls, obj, recursive_dict, restored_dict=None):
+        obj_type = type(obj)
 
+        if obj_type is cls.__RecursionWrapper:
+            return recursive_dict[obj.obj_type][obj.obj_id]
 
+        if (obj_type in (int, float, bool, complex, str, nonetype, bytes, bytearray)
+            or obj_type in DESCRIPTOR_TYPES
+            or obj is object or obj is type):
+            return obj
 
+        if obj_type in (set, tuple, frozenset):
+            return obj_type([cls._restore_recursion(item, recursive_dict, restored_dict) for item in obj])
 
+        if restored_dict is None:
+            restored_dict = {}
+
+        if obj_type.__name__ in restored_dict:
+            if id(obj) in restored_dict[obj_type.__name__]:
+                return obj
+            else:
+                restored_dict[obj_type.__name__].update({id(obj)})
+        else:
+            restored_dict[obj_type.__name__] = {id(obj)}
+
+        if obj_type is list:
+            for index, item in enumerate(obj):
+                obj[index] = cls._restore_recursion(item, recursive_dict, restored_dict)
+
+        elif obj_type is mapproxytype:
+            for key, value in obj.items():
+                cls._restore_recursion(key, recursive_dict, restored_dict)
+                cls._restore_recursion(value, recursive_dict, restored_dict)
+
+        elif obj_type is dict:
+            for key, value in obj.items():
+                new_key = cls._restore_recursion(key, recursive_dict, restored_dict)
+                new_value = cls._restore_recursion(value, recursive_dict, restored_dict)
+
+                if new_key is not key:
+                    obj[new_key] = obj[key]
+                    del obj[key]
+
+                obj[new_key] = new_value
+
+        elif obj_type is codetype:
+            for prop in CODE_PROPERTIES:
+                cls._restore_recursion(getattr(obj, prop), recursive_dict, restored_dict)
+
+        elif obj_type is celltype:
+            obj.cell_contents = cls._restore_recursion(obj.cell_contents, recursive_dict, restored_dict)
+
+        elif obj_type in (smethodtype, cmethodtype):
+            cls._restore_recursion(obj.__func__, recursive_dict, restored_dict)
+
+        elif obj_type is proptype:
+            cls._restore_recursion(obj.fget, recursive_dict, restored_dict)
+            cls._restore_recursion(obj.fset, recursive_dict, restored_dict)
+            cls._restore_recursion(obj.fdel, recursive_dict, restored_dict)
+
+        elif isfunction(obj) or ismethod(obj):
+            obj.__code__ = cls._restore_recursion(obj.__code__, recursive_dict, restored_dict)
+            cls._restore_recursion(obj.__globals__, recursive_dict, restored_dict)
+            obj.__defaults__ = cls._restore_recursion(obj.__defaults__, recursive_dict, restored_dict)
+            cls._restore_recursion(obj.__closure__, recursive_dict, restored_dict)
+
+        elif inspect.isclass(obj):
+            cls._restore_recursion(obj.__dict__, recursive_dict, restored_dict)
+            obj.__bases__ = cls._restore_recursion(obj.__bases__, recursive_dict, restored_dict)
+
+        else:
+            cls._restore_recursion(obj.__dict__, recursive_dict, restored_dict)
+            obj.__class__ = cls._restore_recursion(obj.__class__, recursive_dict, restored_dict)
+
+        return obj
