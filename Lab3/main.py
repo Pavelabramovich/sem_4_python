@@ -1,6 +1,58 @@
+import types
+import gc
+
 from SerializationOfClassesAndFuncs.serializers_factory import SerializersFactory, SerializerType
 import math
 
+import builtins
+import inspect
+from types import GeneratorType
+
+# D = dict.__new__(dict)
+# print(id(D))
+# D.update({1: 1, 2: 2})
+# items = D.keys()
+# print(items)
+# D[3] = 3
+# print(items)
+#
+# print(id(gc.get_referents(items.mapping)[0]))
+# items.mapping.update({3:4})
+# print(items)
+#
+# for item in inspect.getmembers(items):
+#     print(item)
+
+(int | dict).__args__ = str
+
+print(())
+print(type(int | int))
+
+print(type(list[int]))
+
+print((int | float).__args__)
+print((list[int | float, str]).__args__)
+print((list[int]).__origin__)
+print(type(list[int]).__dict__)
+
+i = int
+i |= str
+
+l = list
+
+print(type(l[int]))
+
+print(int | float == int | float)
+
+for key, value in inspect.getmembers(builtins):
+    if type(value) not in (type, types.BuiltinMethodType):
+        print(f"{value}")
+    # try:
+    #     print(f"{value.__name__ = } {value = } {type(value) = }")
+    # except (KeyError, AttributeError):
+    #     pass
+
+print(abs.__name__)
 
 def tst2(b=10):
     return b + 1
@@ -74,9 +126,6 @@ def for_dec(a):
 df = my_decorator(for_dec)
 
 
-
-
-
 class A:
     x = 15
 
@@ -87,6 +136,7 @@ class A:
     def my_meth(self):
         return self.a * self.b
 
+
 class B:
     def __str__(self):
         return "AAAAAAAA"
@@ -94,13 +144,17 @@ class B:
     def __repr__(self):
         return "AAAAAAAA"
 
+
 class C(A, B):
     pass
 
 
-
 if __name__ == '__main__':
     s = SerializersFactory.create_serializer(SerializerType.JSON)
+
+    print(int.__bases__)
+    print(object.__bases__)
+
 
     class cl:
         def __init__(self, st):
@@ -109,13 +163,13 @@ if __name__ == '__main__':
         def __str__(self):
             return str(self.st)
 
+
     st = {1, 2, 3, 4}
     st.update({cl(st)})
 
     print(st)
 
-
-    l = [1,2,3,4]
+    l = [1, 2, 3, 4]
     l[0] = l
 
     print(l)
@@ -125,19 +179,6 @@ if __name__ == '__main__':
     obj_d = s.loads(obj_s)
 
     print(obj_d)
-
-    b1 = bytes(list(range(256)))
-    b2 = bytearray(list(range(256)))
-
-    print(b1)
-    print(b2)
-
-    b3 = b1.decode('Latin-1')
-    b3 = bytes(b3, 'Latin-1')
-
-    print(b3)
-
-    print(b1 == b3)
 
     # print(obj_d(10))
     # print(df(10))
@@ -166,6 +207,3 @@ if __name__ == '__main__':
     # # x = JsonSerializer.dumps(T.clsmet)
     # # print(x)
     # # y = JsonSerializer.loads(x)
-
-
-

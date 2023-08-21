@@ -44,7 +44,7 @@ class B(A):
         self.xy = 10
 
     def inf(self):
-        print(self.xy, " ", self._VAR)
+        print(self.xy, "_and_ ", self._VAR)
 
 
 def rec_func(a):
@@ -65,6 +65,6 @@ def for_dec(a):
 decorated_func = my_decorator(for_dec)
 
 
-def gen():
+def gen_func():
     for i in range(10):
         yield i

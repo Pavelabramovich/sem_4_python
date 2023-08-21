@@ -1,3 +1,7 @@
+import builtins
+import inspect
+import types
+
 from types import (
     NoneType as nonetype,
     ModuleType as moduletype,
@@ -10,7 +14,12 @@ from types import (
     MethodDescriptorType as metdesctype,
     GetSetDescriptorType as getsetdesctype,
     ClassMethodDescriptorType as clsmetdesctype,
-    MemberDescriptorType as memdesctype
+    MemberDescriptorType as memdesctype,
+    GeneratorType as gentype,
+    EllipsisType as ellipsistype,
+    NotImplementedType as notimplementedtype,
+    UnionType as uniontype,
+    GenericAlias as genaliastype
 )
 
 smethodtype = staticmethod
@@ -48,4 +57,18 @@ DESCRIPTOR_TYPES = (
     memdesctype
 )
 
+BUILTIN_FUNCTIONS = {value.__name__: value for _, value in inspect.getmembers(builtins)
+                     if isinstance(value, types.BuiltinMethodType)}
+
+BUILTIN_CLASSES = {value.__name__: value for _, value in inspect.getmembers(builtins)
+                   if inspect.isclass(value)}
+
+BUILTINS = mapproxytype({**BUILTIN_FUNCTIONS, **BUILTIN_CLASSES})
+
+
+dct = {1: 1, 2: 2, 3: 3}
+
+DICT_OPERATIONS_TYPES = (type(dct.items()), type(dct.keys()), type(dct.values()))
+
+ITER_TYPES = (enumerate, filter, map, range, zip)
 
