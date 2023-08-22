@@ -1,5 +1,6 @@
 import types
 import gc
+from datetime import date, time, datetime, timedelta
 
 from SerializationOfClassesAndFuncs.serializers_factory import SerializersFactory, SerializerType
 import math
@@ -23,17 +24,18 @@ from types import GeneratorType
 # for item in inspect.getmembers(items):
 #     print(item)
 
-(int | dict).__args__ = str
+print(' '.isspace())
 
-print(())
-print(type(int | int))
+d = date(year=1, month=2, day=3)
+t = time(hour=10, minute=20, second=30, microsecond=40)
+dt = datetime.combine(date=d, time=t)
+td = timedelta(weeks=10, days=3, hours=10, minutes=10, seconds=2, milliseconds=2, microseconds=45)
 
-print(type(list[int]))
 
-print((int | float).__args__)
-print((list[int | float, str]).__args__)
-print((list[int]).__origin__)
-print(type(list[int]).__dict__)
+print(td.days)
+print(td.seconds)
+print(td.microseconds)
+
 
 i = int
 i |= str

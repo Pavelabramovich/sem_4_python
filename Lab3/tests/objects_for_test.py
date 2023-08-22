@@ -44,7 +44,7 @@ class B(A):
         self.xy = 10
 
     def inf(self):
-        print(self.xy, "_and_ ", self._VAR)
+        return f"{self.xy}_and_{self._VAR}"
 
 
 def rec_func(a):

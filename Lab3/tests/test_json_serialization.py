@@ -1,4 +1,5 @@
 import unittest
+from datetime import date, time, datetime, timedelta
 from unittest import TestCase
 from SerializationOfClassesAndFuncs import SerializersFactory, SerializerType
 
@@ -7,18 +8,15 @@ from tests.objects_for_test import (
     rec_func,
     gen_func,
     decorated_func,
-    A, B
+    B
 )
 
 
 class SerializationTestCase(TestCase):
-
     def setUp(self):
         self.json = SerializersFactory.create_serializer(SerializerType.JSON)
 
     def test_primitives(self):
-        """Test primitive types json serialization"""
-
         primitives = self.json.dumps(PRIMITIVES)
         primitives = self.json.loads(primitives)
 
@@ -28,13 +26,63 @@ class SerializationTestCase(TestCase):
         l = [1, 2, 3]
         l[0] = l
 
-        L = [1,2,3, l]
+        L = [1, 2, 3, l]
 
         sL = self.json.dumps(L)
         sL = self.json.loads(sL)
 
         with self.assertRaises(RecursionError):
             self.assertSequenceEqual(L, sL)
+
+    def test_inf_nan(self):
+        t = (10E1000, -10E1000, 10E1000 / 10E1000)
+
+        st = self.json.dumps(t)
+        st = self.json.loads(st)
+
+        # str because nan != nan
+        self.assertSequenceEqual(str(t), str(st))
+
+    def test_datetime(self):
+        d = date(year=1, month=2, day=3)
+        t = time(hour=10, minute=20, second=30, microsecond=40)
+        dt = datetime.combine(date=d, time=t)
+        td = timedelta(weeks=10, days=3, hours=10, minutes=10, seconds=2, milliseconds=2, microseconds=45)
+
+        l = [d, t, dt, td]
+
+        sl = self.json.dumps(l)
+        sl = self.json.loads(sl)
+
+        self.assertSequenceEqual(l, sl)
+
+    def test_ellipsis(self):
+        e = self.json.dumps(...)
+        e = self.json.loads(e)
+
+        self.assertEqual(e, ...)
+
+    def test_not_implemented(self):
+        sni = self.json.dumps(NotImplemented)
+        sni = self.json.loads(sni)
+
+        self.assertEqual(sni, NotImplemented)
+
+    def test_union(self):
+        u = int | dict | bool | str
+
+        su = self.json.dumps(u)
+        su = self.json.loads(su)
+
+        self.assertEqual(su, u)
+
+    def test_generic_alias(self):
+        g = dict[int | str, str]
+
+        sg = self.json.dumps(g)
+        sg = self.json.loads(sg)
+
+        self.assertEqual(sg, g)
 
     def test_filter(self):
         l = [1, 2, 3, 4, 5, 6]
@@ -46,46 +94,6 @@ class SerializationTestCase(TestCase):
 
         self.assertSequenceEqual(list(f2), list(sf))
 
-    def test_inf(self):
-        t = (10E1000, -10E1000, 10E1000 / 10E1000)
-
-        print(t)
-
-        st = self.json.dumps(t)
-        st = self.json.loads(st)
-
-        self.assertSequenceEqual(str(t), str(st))
-
-    def test_ellipsis(self):
-
-        e = self.json.dumps(...)
-        e = self.json.loads(e)
-
-        self.assertEqual(e, ...)
-
-    def test_not_implemented(self):
-
-        sni = self.json.dumps(NotImplemented)
-        sni = self.json.loads(sni)
-
-        self.assertEqual(sni, NotImplemented)
-
-    def test_uion(self):
-        u = int | dict | bool | str
-
-        su = self.json.dumps(u)
-        su = self.json.loads(su)
-
-        self.assertEqual(su, u)
-
-    def test_generic_alias(self):
-        g = list[int | str, str]
-
-        sg = self.json.dumps(g)
-        sg = self.json.loads(sg)
-
-        self.assertEqual(sg, g)
-
     def test_dict_items(self):
         d = {1: 1, 2: 2}
         items = d.keys()
@@ -95,49 +103,35 @@ class SerializationTestCase(TestCase):
 
         self.assertSequenceEqual(tuple(items), s_items)
 
+    def test_builtin(self):
+        a = abs
+
+        sa = self.json.dumps(a)
+        sa = self.json.loads(sa)
+
+        self.assertEqual(sa(-2), 2)
+
     def test_nested_class(self):
         class C:
             def __init__(self):
                 self.c = C
 
-            def prnt(self):
+            def a(self):
                 a = C
-                print(a().c)
+                return a().c
+
+            @staticmethod
+            def value():
+                return "val"
 
         C.d = C
-
-
-
 
         sC = self.json.dumps(C)
         sC = self.json.loads(sC)
 
-        sC().prnt()
-
-    def test_not_object_base(self):
-        class TestDict(dict):
-            def add_item(self, key, value):
-                super().update({key: value})
-
-        d = TestDict()
-
-        # with open("data_file.json", "w") as file:
-        #     self.json.dump(d, file)
-
-        sd = self.json.dumps(d)
-        sd = self.json.loads(sd)
-
-        d.add_item(2, "234")
-        sd.add_item(2, "234")
-
-        print(d.items())
-        print(type(sd.items()))
-
-        self.assertSequenceEqual(d.items(), sd.items())
+        self.assertSequenceEqual([C().a().value(), C.d().value()], [sC().a().value(), sC.d().value()])
 
     def test_func(self):
-        """Test func json serialization"""
-
         func = self.json.dumps(rec_func)
         func = self.json.loads(func)
 
@@ -147,8 +141,6 @@ class SerializationTestCase(TestCase):
         self.assertEqual(before, after)
 
     def test_gen_func(self):
-        """Test gen func serialization"""
-
         s_gen = self.json.dumps(gen_func)
         s_gen = self.json.loads(s_gen)
 
@@ -158,8 +150,6 @@ class SerializationTestCase(TestCase):
         self.assertEqual(before, after)
 
     def test_gen(self):
-        """Test gen serialization"""
-
         gen1 = gen_func()
         gen2 = gen_func()
 
@@ -172,8 +162,6 @@ class SerializationTestCase(TestCase):
         self.assertEqual(before, after)
 
     def test_decorator(self):
-        """Test decorator serialization"""
-
         df = self.json.dumps(decorated_func)
         df = self.json.loads(df)
 
@@ -182,19 +170,9 @@ class SerializationTestCase(TestCase):
 
         self.assertEqual(before, after)
 
-
-
     def test_class(self):
-        """Test class serialization"""
-
-        with open("data_file.json", "w") as file:
-            self.json.dump(B, file)
-
         sB = self.json.dumps(B)
         sB = self.json.loads(sB)
-
-        q = sB("name")
-        q.name = "123"
 
         before = [B.a, B.b, B.c, B._X, B.bx_test(), B.sttmet(), B("name").name]
         after = [sB.a, sB.b, sB.c, sB._X, sB.bx_test(), sB.sttmet(), sB("name").name]
@@ -202,14 +180,7 @@ class SerializationTestCase(TestCase):
         self.assertEqual(before, after)
 
     def test_object(self):
-        """Test object serialization"""
-
-
-
         b = B("123")
-
-        # with open("data_file.json", "w") as file:
-        #     self.json.dump(b, file)
 
         sb = self.json.dumps(b)
         sb = self.json.loads(sb)
@@ -217,10 +188,7 @@ class SerializationTestCase(TestCase):
         b.name = "qwe"
         sb.name = "qwe"
 
-        b.inf()
-        sb.inf()
-
-        self.assertEqual(b.name, sb.name)
+        self.assertSequenceEqual([b.name, b.inf()], [sb.name, sb.inf()])
 
 
 if __name__ == '__main__':

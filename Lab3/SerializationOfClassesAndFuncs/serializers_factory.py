@@ -1,23 +1,23 @@
 from enum import Enum
 
-from SerializationOfClassesAndFuncs import XmlSerializer
-from SerializationOfClassesAndFuncs import JsonSerializer
+from SerializationOfClassesAndFuncs.json_serializer import JsonSerializer
+from SerializationOfClassesAndFuncs.xml_serializer import XmlSerializer
 
 
 class SerializerType(Enum):
-    JSON = "json"
-    XML = "xml"
+    JSON = JsonSerializer
+    XML = XmlSerializer
 
 
 class SerializersFactory:
     @staticmethod
-    def create_serializer(st: SerializerType):
-
-        if st == SerializerType.JSON:
-            return JsonSerializer()
-
-        elif st == SerializerType.XML:
-            return XmlSerializer()
-
+    def create_serializer(st: SerializerType | str):
+        if isinstance(st, SerializerType):
+            return st.value()
+        elif isinstance(st, str):
+            try:
+                return SerializerType[st.strip().upper()].value()
+            except KeyError as error:
+                raise ValueError(f"Incorrect argument: {st}") from error
         else:
-            raise Exception("Unknown type of serialization")
+            raise ValueError(f"Incorrect argument: {st}")
