@@ -107,7 +107,7 @@ class JsonSerializer(BaseSerializer):
                     self.__loads_to_dict(matches[i + 1][0]) for i in range(0, len(matches), 2)}
 
         else:
-            raise ValueError
+            raise ValueError(f"Incorrect format")
 
     @staticmethod
     def __mask_quotes(string: str) -> str:

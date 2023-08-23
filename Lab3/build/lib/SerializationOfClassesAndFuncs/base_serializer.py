@@ -2,6 +2,12 @@ from abc import ABC, abstractmethod
 
 
 class BaseSerializer(ABC):
+    def __new__(cls):
+        if not hasattr(cls, 'instance'):
+            cls.instance = super().__new__(cls)
+
+        return cls.instance
+
     @abstractmethod
     def dumps(self, obj) -> str:
         pass
@@ -10,10 +16,10 @@ class BaseSerializer(ABC):
     def loads(self, string: str):
         pass
 
-    def dump(self, obj, source_file):
-        source_file.write(self.dumps(obj))
+    def dump(self, obj, file):
+        file.write(self.dumps(obj))
 
-    def load(self, source_file):
-        return self.loads(source_file.read())
+    def load(self, file):
+        return self.loads(file.read())
 
 

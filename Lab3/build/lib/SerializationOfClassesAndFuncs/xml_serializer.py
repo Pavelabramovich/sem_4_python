@@ -4,68 +4,108 @@ import regex
 from SerializationOfClassesAndFuncs import BaseSerializer
 from SerializationOfClassesAndFuncs import DictSerializer
 
-from SerializationOfClassesAndFuncs import nonetype
+from SerializationOfClassesAndFuncs.type_constants import nonetype
 
 
 class XmlSerializer(BaseSerializer):
-    NONE_LITERAL = "null"
+    NULL_LITERAL = "null"
 
-    KEY_GROUP_NAME = "key"
+    KEY_LITERAL = "key"
+    VALUE_LITERAL = "value"
+    KVPAIR_LITERAL = "kvpair"
+
+    TAG_GROUP_NAME = "tag"
     VALUE_GROUP_NAME = "value"
 
-    XML_SCHEME_SOURCE = "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" " + \
-                        "xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\""
+    XML_SCHEME_SOURCE = ("xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" "
+                         + "xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"")
 
-    XML_SCHEME_PATTERN = "xmlns:xsi=\"http://www\.w3\.org/2001/XMLSchema-instance\" " + \
-                         "xmlns:xsd=\"http://www\.w3\.org/2001/XMLSchema\""
+    XML_SCHEME_PATTERN = XML_SCHEME_SOURCE.replace('.', r'\.')
 
-    ELEMENTARY_NAMES_PATTERN = "int|float|bool|str|NoneType|list|dict"
+    ELEMENTARY_NAMES_PATTERN = '|'.join(tuple(t.__name__ for t in (int, float, bool, str, list, dict)))
+    TAGS_PATTERN = f"{ELEMENTARY_NAMES_PATTERN}|{NULL_LITERAL}|{KEY_LITERAL}|{VALUE_LITERAL}|{KVPAIR_LITERAL}"
 
-    XML_ELEMENT_PATTERN = fr"(\<(?P<{KEY_GROUP_NAME}>{ELEMENTARY_NAMES_PATTERN})\>" + \
-                          fr"(?P<{VALUE_GROUP_NAME}>([^<>]*)|(?R)+)\</(?:{ELEMENTARY_NAMES_PATTERN})\>)"
+    EMPTY_XML_ELEMENT_PATTERN = fr"<(?P<{TAG_GROUP_NAME}>{TAGS_PATTERN})/>"
 
-    FIRST_XML_ELEMENT_PATTERN = fr"(\<(?P<{KEY_GROUP_NAME}>{ELEMENTARY_NAMES_PATTERN})\s*({XML_SCHEME_PATTERN})?\>" + \
-                                fr"(?P<{VALUE_GROUP_NAME}>([^<>]*)|(?R)+)\</(?:{ELEMENTARY_NAMES_PATTERN})\>)"
+    NOT_EMPTY_XML_ELEMENT_PATTERN = (fr"<(?P<{TAG_GROUP_NAME}>{TAGS_PATTERN})>"
+                                     + fr"(?P<{VALUE_GROUP_NAME}>([^<>]*)|(?R)+)</(?:{TAGS_PATTERN})>")
+
+    EMPTY_FIRST_XML_ELEMENT_PATTERN = fr"<(?P<{TAG_GROUP_NAME}>{TAGS_PATTERN})\s{XML_SCHEME_PATTERN}/>"
+
+    NOT_EMPTY_FIRST_XML_ELEMENT_PATTERN = (
+        fr"<(?P<{TAG_GROUP_NAME}>{TAGS_PATTERN})\s{XML_SCHEME_PATTERN}>"
+        + fr"(?P<{VALUE_GROUP_NAME}>((<(?:{TAGS_PATTERN})>"
+        + fr"(([^<>]*)|(?4)+)(?# 4 is the index of the value-group in which the search will continue)"
+        + fr"</(?:{TAGS_PATTERN})>)|(<(?:{TAGS_PATTERN})/>))*)"
+        + fr"</(?:{TAGS_PATTERN})>"
+    )
+
+    XML_ELEMENT_PATTERN = fr"({NOT_EMPTY_XML_ELEMENT_PATTERN}|{EMPTY_XML_ELEMENT_PATTERN})"
+    FIRST_XML_ELEMENT_PATTERN = fr"({NOT_EMPTY_FIRST_XML_ELEMENT_PATTERN}|{EMPTY_FIRST_XML_ELEMENT_PATTERN})"
 
     def dumps(self, obj) -> str:
         obj = DictSerializer.to_dict(obj)
         return self.__dumps_from_dict(obj, is_first=True)
 
     def __dumps_from_dict(self, obj, is_first=False) -> str:
-        if type(obj) in (int, float, bool, nonetype):
-            return self.__create_xml_element(type(obj).__name__, str(obj), is_first)
+        obj_type = type(obj)
 
-        if type(obj) is str:
-            data = self.__mask_symbols(obj)
-            return self.__create_xml_element(str.__name__, data, is_first)
+        if obj_type in (int, float, bool):
+            return self._create_xml_element(type(obj).__name__, str(obj), is_first)
 
-        if type(obj) is list:
+        if obj is None:
+            return self._create_xml_element(self.NULL_LITERAL, '', is_first)
+
+        if obj_type is str:
+            data = self._mask_symbols(obj)
+            return self._create_xml_element(str.__name__, data, is_first)
+
+        if obj_type is list:
             data = ''.join([self.__dumps_from_dict(o) for o in obj])
-            return self.__create_xml_element(list.__name__, data, is_first)
+            return self._create_xml_element(list.__name__, data, is_first)
 
-        if type(obj) is dict:
+        if obj_type is dict:
             data = ''.join(
-                [f"{self.__dumps_from_dict(item[0])}{self.__dumps_from_dict(item[1])}" for item in obj.items()])
-            return self.__create_xml_element(dict.__name__, data, is_first)
+                [self._create_key_value_pair(key, value) for key, value in obj.items()])
+            return self._create_xml_element(dict.__name__, data, is_first)
 
         else:
-            raise ValueError
+            raise ValueError(f"Unknown type: {type(obj)}")
+
+    def _create_key_value_pair(self, key, value):
+        # If the type is a string, then no additional tags need to be created.
+        if type(key) is str:
+            key = self._mask_symbols(key)
+        else:
+            key = self.__dumps_from_dict(key)
+
+        if type(value) is str:
+            value = self._mask_symbols(value)
+        else:
+            value = self.__dumps_from_dict(value)
+
+        key = self._create_xml_element(self.KEY_LITERAL, key)
+        value = self._create_xml_element(self.VALUE_LITERAL, value)
+
+        return self._create_xml_element(self.KVPAIR_LITERAL, f"{key}{value}")
 
     def loads(self, string: str):
-        obj = self.__loads_to_dict(string, is_first=True)
+        obj = self._loads_to_dict(string, is_first=True)
         return DictSerializer.from_dict(obj)
 
-    def __loads_to_dict(self, string: str, is_first=False):
+    def _loads_to_dict(self, string: str, is_first=False):
         string = string.strip()
+
         xml_element_pattern = self.FIRST_XML_ELEMENT_PATTERN if is_first else self.XML_ELEMENT_PATTERN
 
         match = regex.fullmatch(xml_element_pattern, string)
 
-        if not match:
-            raise ValueError
+        if match:
+            key = match.group(self.TAG_GROUP_NAME)
+            value = match.group(self.VALUE_GROUP_NAME) or ''
 
-        key = match.group(self.KEY_GROUP_NAME)
-        value = match.group(self.VALUE_GROUP_NAME)
+        else:
+            raise ValueError(f"Incorrect format")
 
         if key == int.__name__:
             return int(value)
@@ -77,34 +117,59 @@ class XmlSerializer(BaseSerializer):
             return value == str(True)
 
         if key == str.__name__:
-            return self.__unmask_symbols(value)
+            return self._unmask_symbols(value)
 
-        if key == nonetype.__name__:
+        if key == self.NULL_LITERAL:
             return None
 
         if key == list.__name__:
             matches = regex.findall(self.XML_ELEMENT_PATTERN, value)
-            return [self.__loads_to_dict(match[0]) for match in matches]
+            return [self._loads_to_dict(match[0]) for match in matches]
+
+        if key == self.KVPAIR_LITERAL:
+            key, value = regex.findall(self.XML_ELEMENT_PATTERN, value)
+
+            key = self._loads_to_dict(key[0])
+            value = self._loads_to_dict(value[0])
+
+            return key, value
+
+        if key in (self.KEY_LITERAL, self.VALUE_LITERAL):
+            match = regex.findall(self.XML_ELEMENT_PATTERN, value)
+
+            # If there are no tags inside the kvpair, then this is a string value.
+            if match:
+                return self._loads_to_dict(match[0][0])
+            else:
+                return value
 
         if key == dict.__name__:
             matches = regex.findall(self.XML_ELEMENT_PATTERN, value)
-            return {self.__loads_to_dict(matches[i][0]):
-                        self.__loads_to_dict(matches[i + 1][0]) for i in range(0, len(matches), 2)}
-        else:
-            raise ValueError
+            kvpairs = tuple(self._loads_to_dict(match[0]) for match in matches)
+            return {key: value for key, value in kvpairs}
 
-    def __create_xml_element(self, name: str, data: str, is_first=False):
-        if is_first:
-            return f"<{name} {self.XML_SCHEME_SOURCE}>{data}</{name}>"
         else:
-            return f"<{name}>{data}</{name}>"
+            raise ValueError(f"Unknown type: {key}")
+
+    @classmethod
+    def _create_xml_element(cls, name: str, data: str, is_first=False):
+        if not data or data.isspace():
+            if is_first:
+                return f"<{name} {cls.XML_SCHEME_SOURCE}/>"
+            else:
+                return f"<{name}/>"
+        else:
+            if is_first:
+                return f"<{name} {cls.XML_SCHEME_SOURCE}>{data}</{name}>"
+            else:
+                return f"<{name}>{data}</{name}>"
 
     @staticmethod
-    def __mask_symbols(string: str) -> str:
+    def _mask_symbols(string: str) -> str:
         return string.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;"). \
-                      replace('"', "&quot;").replace("'", "&apos;")
+            replace('"', "&quot;").replace("'", "&apos;")
 
     @staticmethod
-    def __unmask_symbols(string: str) -> str:
+    def _unmask_symbols(string: str) -> str:
         return string.replace("&amp;", '&').replace("&lt;", '<').replace("&gt;", '>'). \
-                      replace("&quot;", '"').replace("&apos;", "'")
+            replace("&quot;", '"').replace("&apos;", "'")
