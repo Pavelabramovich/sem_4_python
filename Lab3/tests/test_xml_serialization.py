@@ -1,7 +1,7 @@
 import unittest
 from datetime import date, time, datetime, timedelta
 from unittest import TestCase
-from SerializationOfClassesAndFuncs import SerializersFactory, SerializerType
+from SerializationOfClassesAndFuncs import XmlSerializer
 
 from tests.objects_for_test import (
     PRIMITIVES,
@@ -14,7 +14,7 @@ from tests.objects_for_test import (
 
 class SerializationTestCase(TestCase):
     def setUp(self):
-        self.xml = SerializersFactory.create_serializer(SerializerType.XML)
+        self.xml = XmlSerializer()
 
     def test_primitives(self):
         primitives = self.xml.dumps(PRIMITIVES)
@@ -189,6 +189,11 @@ class SerializationTestCase(TestCase):
         sb.name = "qwe"
 
         self.assertSequenceEqual([b.name, b.inf()], [sb.name, sb.inf()])
+
+    def test_singleton(self):
+        second_serializer = XmlSerializer()
+
+        self.assertEqual(self.xml, second_serializer)
 
 
 if __name__ == '__main__':

@@ -1,7 +1,7 @@
 import unittest
 from datetime import date, time, datetime, timedelta
 from unittest import TestCase
-from SerializationOfClassesAndFuncs import SerializersFactory, SerializerType
+from SerializationOfClassesAndFuncs import JsonSerializer
 
 from tests.objects_for_test import (
     PRIMITIVES,
@@ -14,7 +14,7 @@ from tests.objects_for_test import (
 
 class SerializationTestCase(TestCase):
     def setUp(self):
-        self.json = SerializersFactory.create_serializer(SerializerType.JSON)
+        self.json = JsonSerializer()
 
     def test_primitives(self):
         primitives = self.json.dumps(PRIMITIVES)
@@ -189,6 +189,11 @@ class SerializationTestCase(TestCase):
         sb.name = "qwe"
 
         self.assertSequenceEqual([b.name, b.inf()], [sb.name, sb.inf()])
+
+    def test_singleton(self):
+        second_serializer = JsonSerializer()
+
+        self.assertEqual(self.json, second_serializer)
 
 
 if __name__ == '__main__':

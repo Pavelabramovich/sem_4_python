@@ -207,7 +207,8 @@ class DictSerializer:
             source[cls.CODE_KW] = cls._to_dict(obj.__code__, recursion_dict)
 
             # Global vars
-            source[cls.GLOBALS_KW] = cls._get_gvars(obj, recursion_dict)
+            source[cls.GLOBALS_KW] = {cls._to_dict(key, recursion_dict): cls._to_dict(value, recursion_dict)
+                                      for key, value in cls._get_gvars(obj).items()}
 
             # Name
             source[cls.NAME_KW] = cls._to_dict(obj.__name__)
@@ -231,7 +232,8 @@ class DictSerializer:
             source[cls.BASES_KW] = cls._to_dict(tuple(b for b in obj.__bases__ if b is not object))
 
             # Dict
-            source[cls.DICT_KW] = cls._get_obj_dict(obj, recursion_dict)
+            source[cls.DICT_KW] = {cls._to_dict(key, recursion_dict): cls._to_dict(value, recursion_dict)
+                                   for key, value in cls._get_obj_dict(obj).items()}
 
             ser_obj = {cls.TYPE_KW: type.__name__,
                        cls.SOURCE_KW: source}
@@ -243,7 +245,8 @@ class DictSerializer:
             source[cls.CLASS_KW] = cls._to_dict(obj.__class__, recursion_dict=recursion_dict)
 
             # Dict
-            source[cls.DICT_KW] = cls._get_obj_dict(obj, recursion_dict)
+            source[cls.DICT_KW] = {cls._to_dict(key, recursion_dict): cls._to_dict(value, recursion_dict)
+                                   for key, value in cls._get_obj_dict(obj).items()}
 
             return {cls.TYPE_KW: object.__name__,
                     cls.SOURCE_KW: source}
@@ -256,25 +259,25 @@ class DictSerializer:
 
         return ser_obj
 
-    @classmethod
-    def _get_gvars(cls, func, recursion_dict):
+    @staticmethod
+    def _get_gvars(func):
         gvars = {}
 
         for gvar_name in func.__code__.co_names:
             # Separating the variables that the function needs
             if gvar_name in func.__globals__:
-                gvars[cls._to_dict(gvar_name)] = cls._to_dict(func.__globals__[gvar_name],  recursion_dict)
+                gvars[gvar_name] = func.__globals__[gvar_name]
 
         return gvars
 
-    @classmethod
-    def _get_obj_dict(cls, obj, recursion_dict):
+    @staticmethod
+    def _get_obj_dict(obj):
         dct = {}
 
         if hasattr(obj, '__dict__'):
             for key, value in obj.__dict__.items():
                 if type(value) not in DESCRIPTOR_TYPES:
-                    dct[cls._to_dict(key)] = cls._to_dict(value, recursion_dict)
+                    dct[key] = value
 
         return dct
 

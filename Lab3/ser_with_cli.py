@@ -1,4 +1,4 @@
-from SerializationOfClassesAndFuncs.serializers_factory import SerializersFactory, SerializerType
+from SerializationOfClassesAndFuncs.serializers_factory import SerializersFactory
 import argparse
 
 
@@ -16,8 +16,8 @@ if __name__ == '__main__':
     format_from = args.format_from
     format_to = args.format_to
 
-    format_from = SerializersFactory.create_serializer(SerializerType.XML if format_from == "xml" else SerializerType.JSON)
-    format_to = SerializersFactory.create_serializer(SerializerType.XML if format_to == "xml" else SerializerType.JSON)
+    format_from = SerializersFactory.create_serializer(format_from)
+    format_to = SerializersFactory.create_serializer(format_to)
 
     with open(file_from, "r") as file:
         obj = format_from.load(file)

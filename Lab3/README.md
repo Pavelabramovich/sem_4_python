@@ -6,13 +6,16 @@ pip install SerializationOfClassesAndFuncs
 Get started
 
 
-from SerializationOfClassesAndFuncs import SerializersFactory, SerializerType
+from SerializationOfClassesAndFuncs import SerializersFactory
+from someclass import SomeClass
 
-s = SerializersFactory.create_serializer(SerializerType.XML)
+obj1 = SomeClass()
+
+s = SerializersFactory.create_serializer("xml")
 
 with open("data_file.xml", "w") as file:
-    s.dump(T.tst4, file)
+    s.dump(obj, file)
     
 with open("data_file.xml", "r") as file:
-    a = s.load(file)
+    obj2 = s.load(file)
 	
